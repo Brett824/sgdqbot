@@ -33,6 +33,7 @@ end
 
 def get_runs
 
+  # TODO: break this connection stuff off into a seperate method
   uri = URI.parse("http://gamesdonequick.com/schedule")
   http = Net::HTTP.new(uri.host, uri.port)
   request = Net::HTTP::Get.new(uri.request_uri)
@@ -64,20 +65,15 @@ end
 def get_current_and_next(schedule)
 
   now = Time.now
-  current_run = nil
-  next_run = nil
-  schedule.each do |run|
 
-    if run.time_obj > now
-      next_run = run
-      break
-    end
-
-    current_run = run
-
+  # find the first run with time > now and the previous run had time < now.
+  c,n = schedule.each_cons(2).find do |c,n|
+    c.time_obj <= now && n.time_obj  > now
   end
 
-  return [current_run, next_run]
+  return nil, schedule[0] if now < schedule[0].time_obj
+  return schedule[-1], nil if now >= schedule[-1].time_obj
+  return c,n
 
 end
 
@@ -93,6 +89,7 @@ def get_runs_by_game(schedule, game)
 
 end
 
+# make a neat reply string from the result in the format of 1. {result} | 2. result | ... 
 def make_reply(results)
 
   (1..results.length).zip(results).map{|i, res| "#{i}. #{res}"}.join(" | ")
@@ -106,6 +103,7 @@ def sgdq(_tokens)
 
 end
 
+# process the results of .when queries to check if they're valid
 def process_results(results)
 
   if results.length > 5
@@ -129,6 +127,7 @@ def whengame(tokens)
 
 end
 
+# dispatch table for different bot commands, generates reply strings in each of the methods
 $bot_commands = {".sgdq" => method(:sgdq),
                 ".whenrunner" => method(:whenrunner),
                 ".whengame" => method(:whengame)}
@@ -149,6 +148,7 @@ bot = Cinch::Bot.new do
       c.nick = ARGV[2]
     end
 
+    # spawn a new thread to keep up to date on the schedule by refreshing every 60 seconds (the schedule changes when things run short/long)
     Thread.new do
       loop do
 
@@ -170,6 +170,7 @@ bot = Cinch::Bot.new do
 
     tokens = m.message.split(" ")
 
+    # check the dispatch table for the function, spit out an error message or build a reply string
     if $bot_commands.key? tokens[0]
       m.reply $schedule.nil? ? "Error accessing SGDQ schedule." : $bot_commands[tokens[0]].call(tokens)
     end
