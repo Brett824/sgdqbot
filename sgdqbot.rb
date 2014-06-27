@@ -152,15 +152,19 @@ bot = Cinch::Bot.new do
     Thread.new do
       loop do
 
-        puts "Updating schedule"
-        STDOUT.flush
-        temp = get_runs
-        if temp.nil?
-          next
-        end
-        $schedule = temp
-        sleep(60)
+        begin
+          puts "Updating schedule"
+          STDOUT.flush
+          temp = get_runs
+          if temp.nil?
+            next
+          end
+          $schedule = temp
+          sleep(60)
+        rescue
 
+        end
+        
       end
     end
 
